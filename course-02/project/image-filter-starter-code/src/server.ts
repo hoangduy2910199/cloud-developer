@@ -41,11 +41,26 @@ import {filterImageFromURL, deleteLocalFiles} from './util/util';
   app.get("/filteredimage", async( req, res ) => {
     const inputURL = req.query.image_url;
     console.log(inputURL);
-    var image = await filterImageFromURL(inputURL);
-    var imageArray = new Array(image);
-    res.sendFile(image, () => {
-      deleteLocalFiles(imageArray);
-    })
+    filterImageFromURL(inputURL).then((image)=> {
+      var imageArray = new Array(image);
+      res.sendFile(image, () => {
+        deleteLocalFiles(imageArray);
+      })
+      }) 
+      .catch((rej)=> {
+        res.status(404).json({"message": "image not found"});
+      }
+    );
+    // var image = await filterImageFromURL(inputURL);
+    // var imageArray = new Array(image);
+    // if( image != null) {
+    //   res.sendFile(image, () => {
+    //     deleteLocalFiles(imageArray);
+    //   })
+    // } else {
+    //   res.status(499).json({"message": "image not found"});
+    // }
+    
   });
   
 
