@@ -43,7 +43,7 @@ import {filterImageFromURL, deleteLocalFiles} from './util/util';
     console.log(inputURL);
     filterImageFromURL(inputURL).then((image)=> {
       var imageArray = new Array(image);
-      res.sendFile(image, () => {
+      res.status(200).sendFile(image, () => {
         deleteLocalFiles(imageArray);
       })
       }) 
