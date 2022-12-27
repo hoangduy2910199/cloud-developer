@@ -1,9 +1,14 @@
 import * as AWS from 'aws-sdk';
 import { createLogger } from '../../utils/logger';
+const AWSXRay = require('aws-xray-sdk');
 
+
+const XAWS = AWSXRay.captureAWS(AWS);
 const logger = createLogger('S3 Attachment')
 
-const s3 = new AWS.S3({
+
+
+const s3 = new XAWS.AWS.S3({
   signatureVersion: 'v4'
 });
 
