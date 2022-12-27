@@ -1,22 +1,17 @@
 import { CustomAuthorizerEvent, CustomAuthorizerResult } from 'aws-lambda'
 import 'source-map-support/register'
+import { verify } from 'jsonwebtoken'
+import Axios from 'axios';
 
-import { verify, decode } from 'jsonwebtoken'
 import { createLogger } from '../../utils/logger'
-import Axios from 'axios'
-import { Jwt } from '../../auth/Jwt'
-import { JwtPayload } from '../../auth/JwtPayload'
+import { JwtToken } from '../../auth/JwtToken'
 
 const logger = createLogger('auth')
 
-// TODO: Provide a URL that can be used to download a certificate that can be used
-// to verify JWT token signature.
-// To get this URL you need to go to an Auth0 page -> Show Advanced Settings -> Endpoints -> JSON Web Key Set
-const jwksUrl = '...'
+// Update Auth0 certificate URL
+const jwksUrl = 'https://dev-cwp9jszr.us.auth0.com/.well-known/jwks.json';
 
-export const handler = async (
-  event: CustomAuthorizerEvent
-): Promise<CustomAuthorizerResult> => {
+export const handler = async (event: CustomAuthorizerEvent): Promise<CustomAuthorizerResult> => {
   logger.info('Authorizing a user', event.authorizationToken)
   try {
     const jwtToken = await verifyToken(event.authorizationToken)
@@ -54,24 +49,26 @@ export const handler = async (
   }
 }
 
-async function verifyToken(authHeader: string): Promise<JwtPayload> {
-  const token = getToken(authHeader)
-  const jwt: Jwt = decode(token, { complete: true }) as Jwt
-
-  // TODO: Implement token verification
-  // You should implement it similarly to how it was implemented for the exercise for the lesson 5
-  // You can read more about how to do this here: https://auth0.com/blog/navigating-rs256-and-jwks/
-  return undefined
-}
-
-function getToken(authHeader: string): string {
-  if (!authHeader) throw new Error('No authentication header')
+// Implement token verification
+async function verifyToken(authHeader: string): Promise<JwtToken> {
+  if (!authHeader)
+    throw new Error('Authentication header is empty')
 
   if (!authHeader.toLowerCase().startsWith('bearer '))
-    throw new Error('Invalid authentication header')
+    throw new Error('Authentication header is invalid')
 
   const split = authHeader.split(' ')
-  const token = split[1]
+  const token = split[1];
+  let certAlgorithm;
+  let certInf: string;
+  try {
+    const res = await Axios.get(jwksUrl);
+    const certKey = res['data']['keys'][0]['x5c'][0];
+    certAlgorithm = res['data']['keys'][0]['alg'];
+    certInf = `-----BEGIN CERTIFICATE-----\n${certKey}\n-----END CERTIFICATE-----`;
+  } catch (err) {
+    logger.error('can\'t get certificate from Auth0', err);
+  }
 
-  return token
+  return verify(token, certInf, { algorithms: [certAlgorithm]}) as JwtToken;
 }
